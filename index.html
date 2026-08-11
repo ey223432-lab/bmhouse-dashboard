@@ -1,0 +1,1024 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>비엠하우스 사업 소명과 실행 기획</title>
+<link rel="icon" href="data:,">
+<script src="https://cdnjs.cloudflare.com/ajax/libs/react/18.2.0/umd/react.production.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/react-dom/18.2.0/umd/react-dom.production.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/babel-standalone/7.23.5/babel.min.js"></script>
+<style>
+  html, body { margin: 0; padding: 0; background: #FAF7F1; }
+  #root { min-height: 100vh; }
+</style>
+</head>
+<body>
+<div id="root"></div>
+<script type="text/babel" data-presets="react">
+
+const { useState, useEffect, useRef, useCallback, useMemo } = React;
+
+
+/* ---- 아이콘 (외부 라이브러리 없이 인라인 SVG로 구현) ---- */
+function Icon({ children, size = 18, color = 'currentColor', strokeWidth = 2 }) {
+  return (
+    <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke={color}
+      strokeWidth={strokeWidth} strokeLinecap="round" strokeLinejoin="round">
+      {children}
+    </svg>
+  );
+}
+const ChevronRight = (p) => <Icon {...p}><polyline points="9 6 15 12 9 18" /></Icon>;
+const ChevronLeft = (p) => <Icon {...p}><polyline points="15 6 9 12 15 18" /></Icon>;
+const ChevronDown = (p) => <Icon {...p}><polyline points="6 9 12 15 18 9" /></Icon>;
+const Circle = (p) => <Icon {...p}><circle cx="12" cy="12" r="9" /></Icon>;
+const CircleDot = (p) => (
+  <Icon {...p}><circle cx="12" cy="12" r="9" /><circle cx="12" cy="12" r="2.6" fill={p.color || 'currentColor'} stroke="none" /></Icon>
+);
+const CheckCircle2 = (p) => <Icon {...p}><circle cx="12" cy="12" r="9" /><polyline points="8.3 12.5 11 15.2 16 9.3" /></Icon>;
+const Plus = (p) => <Icon {...p}><line x1="12" y1="5" x2="12" y2="19" /><line x1="5" y1="12" x2="19" y2="12" /></Icon>;
+const Trash2 = (p) => (
+  <Icon {...p}>
+    <polyline points="3 6 5 6 21 6" /><path d="M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6" />
+    <path d="M10 11v6" /><path d="M14 11v6" /><path d="M9 6V4a1 1 0 0 1 1-1h4a1 1 0 0 1 1 1v2" />
+  </Icon>
+);
+const StickyNote = (p) => <Icon {...p}><path d="M4 4h13l3 3v13a1 1 0 0 1-1 1H4a1 1 0 0 1-1-1V5a1 1 0 0 1 1-1z" /><path d="M15 4v5h5" /></Icon>;
+const X = (p) => <Icon {...p}><line x1="18" y1="6" x2="6" y2="18" /><line x1="6" y1="6" x2="18" y2="18" /></Icon>;
+const Check = (p) => <Icon {...p}><polyline points="20 6 9 17 4 12" /></Icon>;
+const RotateCcw = (p) => <Icon {...p}><path d="M3 12a9 9 0 1 0 3-6.7" /><polyline points="3 4 3 9 8 9" /></Icon>;
+const Search = (p) => <Icon {...p}><circle cx="11" cy="11" r="7" /><line x1="21" y1="21" x2="16.65" y2="16.65" /></Icon>;
+const Compass = (p) => <Icon {...p}><circle cx="12" cy="12" r="9" /><polygon points="16 8 14 14 8 16 10 10 16 8" /></Icon>;
+const Sparkles = (p) => (
+  <Icon {...p}><path d="M12 3v4M12 17v4M3 12h4M17 12h4M6 6l2 2M16 16l2 2M6 18l2-2M16 8l2-2" /></Icon>
+);
+
+/* ---- localStorage 저장소 래퍼 (Claude 환경 밖 - 독립 실행용) ---- */
+const Storage = {
+  get: async (key) => {
+    const v = localStorage.getItem(key);
+    return v === null ? null : { key, value: v };
+  },
+  set: async (key, value) => {
+    localStorage.setItem(key, value);
+    return { key, value };
+  },
+};
+
+/* ------------------------------------------------------------------ */
+/*  시드 데이터 — 원본 마인드맵(사업_소명과_실행_기획) 내용 그대로     */
+/* ------------------------------------------------------------------ */
+
+const MISSION_SEED = [{"id": "n2", "text": "생명을 살리고 돌보는 고귀한 일을 통해, 세상에 위로와 따뜻함을 저하는 초막이 된다", "status": "todo", "memo": "", "children": [{"id": "n1", "text": "", "status": "todo", "memo": "", "children": []}]}, {"id": "n5", "text": "핵심 사업 영역", "status": "todo", "memo": "", "children": [{"id": "n3", "text": "B2c/B2B : 유아용품 사업", "status": "todo", "memo": "", "children": []}, {"id": "n4", "text": "B2G (관공서 입찰 지원): 출산 지원 및 치매 어르신 지원 사업", "status": "todo", "memo": "", "children": []}]}, {"id": "n10", "text": "영적 소명과 공익적 목적", "status": "todo", "memo": "", "children": [{"id": "n7", "text": "선한 영향력의 통로", "status": "todo", "memo": "", "children": [{"id": "n6", "text": "생명을 살리고 돌보는 고귀한 사역을 통해 이 땅에 하나님의 영광을 드러냄.", "status": "todo", "memo": "", "children": []}]}, {"id": "n9", "text": "공익적 가치 실현:", "status": "todo", "memo": "", "children": [{"id": "n8", "text": "출산 가정과 치매 어르신 등 누군가의 고통과 필요를 실질적으로 돕는 따뜻한 비즈니스 지향.", "status": "todo", "memo": "", "children": []}]}]}, {"id": "n17", "text": "브랜드 정체성 및 운영 철학", "status": "todo", "memo": "", "children": [{"id": "n12", "text": "운영 원칙", "status": "todo", "memo": "", "children": [{"id": "n11", "text": "정직과 공의를 최우선으로 삼아 주님이 기뻐하시는 정결한 기업 운영.", "status": "todo", "memo": "", "children": []}]}, {"id": "n14", "text": "제품 철학", "status": "todo", "memo": "", "children": [{"id": "n13", "text": "유아와 취약계층을 향한 진심 어린 '안전'과 '배려'를 제품과 서비스의 출발점으로 삼음.", "status": "todo", "memo": "", "children": []}]}, {"id": "n16", "text": "최종 비전", "status": "todo", "memo": "", "children": [{"id": "n15", "text": "지치고 힘든 이들에게 쉼을 제공하는 '초막'과 같이, 사람을 위로하고 살리는 브랜드로 도약.", "status": "todo", "memo": "", "children": []}]}]}, {"id": "n22", "text": "사업적 관점에서의 '정직", "status": "todo", "memo": "", "children": [{"id": "n18", "text": "'정직'은 숨김이나 거짓이 없는 상태로, 하나님과 사람 앞에서 투명하게 행하며 과정의 올바름을 지키는 것을 의미", "status": "todo", "memo": "", "children": []}, {"id": "n19", "text": "제품과 서비스의 진정성: 유아용품 및 어르신 용품 제작 시 눈에 보이지 않는 유해 성분을 철저히 배제하고, 원가 절감을 위해 안전(KC 인증 등)을 절대 타협하지 않는 것.", "status": "todo", "memo": "", "children": []}, {"id": "n20", "text": "투명한 마케팅과 소통: 효능을 부풀리는 과장 광고를 하지 않고, 제품의 장점과 한계를 실수요자와 관공서에 있는 그대로 전달하는 것.", "status": "todo", "memo": "", "children": []}, {"id": "n21", "text": "절차적·재무적 투명성: 납세의 의무를 성실히 이행하며, 특히 B2G 입찰 과정에서 모든 서류, 자격 요건, 재무제표를 위조나 꼼수 없이 정당하게 증명하는 것.", "status": "todo", "memo": "", "children": []}]}, {"id": "n27", "text": "사업적 관점에서의 '공의", "status": "todo", "memo": "", "children": [{"id": "n23", "text": "고아와 과부 등 사회적 약자를 보호하고 올바른 관계와 질서를 회복하는 적극적인 사랑의 실천을 뜻함", "status": "todo", "memo": "", "children": []}, {"id": "n24", "text": "약자의 필요를 채우는 구조: 출산 가정과 치매 어르신이라는 타겟 자체가 이미 공의적 성격을 띱니다. 이들의 실질적인 고통(육아의 어려움, 치매로 인한 일상의 붕괴)을 덜어주고 일상을 회복하도록 돕는 제품을 기획하는 것.", "status": "todo", "memo": "", "children": []}, {"id": "n25", "text": "공정한 거래와 대우: 하청업체나 협력사에 정당한 대가를 지불하고, 직원들에게 합당한 임금과 안전한 노동 환경을 제공하여 기업 내부에서부터 착취가 발생하지 않도록 하는 것.", "status": "todo", "memo": "", "children": []}, {"id": "n26", "text": "가치의 선순환: 사업을 통해 얻은 이윤이 소수에게 독점되지 않고, 다시 사회적 가치(공익사업 확대, 기부 등)로 환원되어 공동체를 이롭게 하는 것.", "status": "todo", "memo": "", "children": []}]}];
+
+const EXEC_SEED = [{"id": "n34", "text": "베이비스토리 자사몰 구축 예정", "status": "todo", "memo": "", "children": [{"id": "n28", "text": "걸어온길(연혁)", "status": "done", "memo": "", "children": []}, {"id": "n29", "text": "브랜드 스토리", "status": "done", "memo": "", "children": []}, {"id": "n31", "text": "내용", "status": "todo", "memo": "", "children": [{"id": "n30", "text": "", "status": "todo", "memo": "", "children": []}]}, {"id": "n33", "text": "결정 사항", "status": "todo", "memo": "", "children": [{"id": "n32", "text": "", "status": "todo", "memo": "", "children": []}]}]}, {"id": "n49", "text": "제품", "status": "todo", "memo": "", "children": [{"id": "n39", "text": "제품 개발, 기획", "status": "todo", "memo": "", "children": [{"id": "n37", "text": "기존 제품 분석 리뉴얼", "status": "todo", "memo": "", "children": [{"id": "n35", "text": "스와들라인 새로운 버젼, 엄마 수유복", "status": "todo", "memo": "", "children": []}, {"id": "n36", "text": "", "status": "todo", "memo": "", "children": []}]}, {"id": "n38", "text": "신규 제품 분석", "status": "todo", "memo": "", "children": []}]}, {"id": "n41", "text": "패키지 개발, 기획", "status": "todo", "memo": "", "children": [{"id": "n40", "text": "선물상자 리뉴얼", "status": "todo", "memo": "", "children": []}]}, {"id": "n48", "text": "인스타 활용", "status": "todo", "memo": "", "children": [{"id": "n45", "text": "인스타 협찬", "status": "todo", "memo": "", "children": [{"id": "n44", "text": "인플루언서 발굴 -3명", "status": "todo", "memo": "", "children": [{"id": "n43", "text": "매일 댓글 , 좋아요", "status": "todo", "memo": "", "children": [{"id": "n42", "text": "반응오면 협찬 제안", "status": "todo", "memo": "", "children": []}]}]}]}, {"id": "n47", "text": "인스타 콘텐츠 제작", "status": "todo", "memo": "", "children": [{"id": "n46", "text": "벤치마킹 서치", "status": "todo", "memo": "", "children": []}]}]}]}, {"id": "n56", "text": "지자체 지원사업", "status": "todo", "memo": "", "children": [{"id": "n53", "text": "임신 출산", "status": "todo", "memo": "", "children": [{"id": "n51", "text": "기존 제품 분석 리뉴얼", "status": "todo", "memo": "", "children": [{"id": "n50", "text": "스와들라인 새로운 버젼, 엄마 수유복", "status": "todo", "memo": "", "children": []}]}, {"id": "n52", "text": "신규 제품 분석", "status": "todo", "memo": "", "children": []}]}, {"id": "n55", "text": "치매어르신", "status": "todo", "memo": "", "children": [{"id": "n54", "text": "선물상자 리뉴얼", "status": "todo", "memo": "", "children": []}]}]}, {"id": "n59", "text": "산후조리원, 여성병원", "status": "todo", "memo": "", "children": [{"id": "n57", "text": "답례품용 제안서", "status": "todo", "memo": "", "children": []}, {"id": "n58", "text": "수유쿠션 비치용 제안서", "status": "todo", "memo": "", "children": []}]}, {"id": "n61", "text": "소셜리, 지그재그 사이트 운영", "status": "todo", "memo": "", "children": [{"id": "n60", "text": "소셜리, 지그재그 사이트 주문 파일 다운로드 받아서 1개의 엑셀 형식으로 합쳐서 작업 주문하는 자동화 바이브코딩", "status": "todo", "memo": "", "children": []}]}, {"id": "n64", "text": "영롱 사이트 운영", "status": "todo", "memo": "", "children": [{"id": "n63", "text": "신상 사진 촬영", "status": "todo", "memo": "", "children": [{"id": "n62", "text": "", "status": "todo", "memo": "", "children": []}]}]}];
+
+/* ------------------------------------------------------------------ */
+/*  디자인 토큰                                                        */
+/* ------------------------------------------------------------------ */
+
+const C = {
+  bg: '#FAF7F1',
+  bgSoft: '#F3EDE1',
+  card: '#FFFFFF',
+  cardAlt: '#FBF8F2',
+  border: '#E7DFCF',
+  borderSoft: '#EFE8DA',
+  ink: '#2C2620',
+  inkSoft: '#8A7F6E',
+};
+C.inkFaint = '#B4A990';
+C.coral = '#B5302B';
+C.coralDeep = '#8F241F';
+C.coralSoft = 'rgba(181,48,43,0.10)';
+C.gold = '#BD9457';
+C.goldSoft = 'rgba(189,148,87,0.14)';
+C.sage = '#748263';
+C.sageSoft = 'rgba(116,130,99,0.14)';
+
+const ACCENTS = [C.coral, C.gold, C.sage, '#7C7295', '#3E7C89', '#A8683E'];
+
+/* ------------------------------------------------------------------ */
+/*  유틸                                                               */
+/* ------------------------------------------------------------------ */
+
+function uid() {
+  return 'x' + Math.random().toString(36).slice(2, 10) + Date.now().toString(36).slice(-4);
+}
+
+function deepClone(x) { return JSON.parse(JSON.stringify(x)); }
+
+function mapTree(nodes, id, fn) {
+  return nodes.map((n) => {
+    if (n.id === id) return fn(n);
+    if (n.children && n.children.length) {
+      return { ...n, children: mapTree(n.children, id, fn) };
+    }
+    return n;
+  });
+}
+
+function removeFromTree(nodes, id) {
+  return nodes
+    .filter((n) => n.id !== id)
+    .map((n) =>
+      n.children && n.children.length
+        ? { ...n, children: removeFromTree(n.children, id) }
+        : n
+    );
+}
+
+function addChildToTree(nodes, parentId, child) {
+  return nodes.map((n) => {
+    if (n.id === parentId) {
+      return { ...n, children: [...(n.children || []), child] };
+    }
+    if (n.children && n.children.length) {
+      return { ...n, children: addChildToTree(n.children, parentId, child) };
+    }
+    return n;
+  });
+}
+
+function collectIds(nodes, acc) {
+  nodes.forEach((n) => {
+    acc.push(n.id);
+    if (n.children && n.children.length) collectIds(n.children, acc);
+  });
+  return acc;
+}
+
+function countProgress(nodes) {
+  let total = 0;
+  let done = 0;
+  const walk = (list) => {
+    list.forEach((n) => {
+      total += 1;
+      if (n.status === 'done') done += 1;
+      if (n.children && n.children.length) walk(n.children);
+    });
+  };
+  walk(nodes);
+  return { total, done };
+}
+
+function nodeMatches(node, q) {
+  if (!q) return true;
+  const hay = (node.text || '') + ' ' + (node.memo || '');
+  if (hay.toLowerCase().includes(q)) return true;
+  if (node.children) return node.children.some((c) => nodeMatches(c, q));
+  return false;
+}
+
+function formatRelative(ts) {
+  if (!ts) return '';
+  const diff = Math.max(0, Date.now() - ts);
+  const min = Math.floor(diff / 60000);
+  if (min < 1) return '방금 전';
+  if (min < 60) return min + '분 전';
+  const hr = Math.floor(min / 60);
+  if (hr < 24) return hr + '시간 전';
+  const day = Math.floor(hr / 24);
+  return day + '일 전';
+}
+
+/* ------------------------------------------------------------------ */
+/*  작은 컴포넌트                                                       */
+/* ------------------------------------------------------------------ */
+
+function StatusIcon({ status, size = 18 }) {
+  if (status === 'done') return <CheckCircle2 size={size} color={C.sage} strokeWidth={2.2} />;
+  if (status === 'doing') return <CircleDot size={size} color={C.gold} strokeWidth={2.2} />;
+  return <Circle size={size} color={C.inkFaint} strokeWidth={2} />;
+}
+
+function nextStatus(s) {
+  if (s === 'todo') return 'doing';
+  if (s === 'doing') return 'done';
+  return 'todo';
+}
+
+function ProgressBar({ done, total, color }) {
+  const pct = total > 0 ? Math.round((done / total) * 100) : 0;
+  return (
+    <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+      <div style={{ flex: 1, height: 6, borderRadius: 999, background: C.borderSoft, overflow: 'hidden' }}>
+        <div style={{ width: pct + '%', height: '100%', background: color || C.coral, borderRadius: 999, transition: 'width .4s ease' }} />
+      </div>
+      <span style={{ fontSize: 11, color: C.inkSoft, fontVariantNumeric: 'tabular-nums', minWidth: 30, textAlign: 'right' }}>{pct}%</span>
+    </div>
+  );
+}
+
+/* ------------------------------------------------------------------ */
+/*  TreeNode — 재귀 렌더링 (상세 화면 안에서만 사용)                    */
+/* ------------------------------------------------------------------ */
+
+function TreeNode({
+  node, depth, showStatus, expandedIds, toggleExpand,
+  onEditText, onEditMemo, onCycleStatus, onAddChild, onDelete, query,
+}) {
+  const [editing, setEditing] = useState(false);
+  const [memoOpen, setMemoOpen] = useState(!!node.memo);
+  const [confirmDel, setConfirmDel] = useState(false);
+  const inputRef = useRef(null);
+  const memoRef = useRef(null);
+  const delTimer = useRef(null);
+
+  useEffect(() => {
+    if (editing && inputRef.current) {
+      inputRef.current.focus();
+      inputRef.current.select();
+    }
+  }, [editing]);
+
+  useEffect(() => () => { if (delTimer.current) clearTimeout(delTimer.current); }, []);
+
+  if (query && !nodeMatches(node, query)) return null;
+
+  const hasChildren = node.children && node.children.length > 0;
+  const expanded = expandedIds.has(node.id);
+  const isEmpty = !node.text;
+
+  const commitText = () => {
+    const val = inputRef.current ? inputRef.current.value : node.text;
+    onEditText(node.id, val.trim());
+    setEditing(false);
+  };
+
+  const commitMemo = () => {
+    const val = memoRef.current ? memoRef.current.value : node.memo;
+    onEditMemo(node.id, val);
+  };
+
+  const startDelete = () => {
+    if (!confirmDel) {
+      setConfirmDel(true);
+      delTimer.current = setTimeout(() => setConfirmDel(false), 3000);
+      return;
+    }
+    if (delTimer.current) clearTimeout(delTimer.current);
+    onDelete(node.id);
+  };
+
+  return (
+    <div style={{ marginLeft: depth === 0 ? 0 : 18 }}>
+      <div
+        className="node-row"
+        style={{
+          display: 'flex', alignItems: 'flex-start', gap: 6, padding: '6px 6px',
+          borderRadius: 8, position: 'relative',
+        }}
+      >
+        <button
+          onClick={() => hasChildren && toggleExpand(node.id)}
+          style={{
+            width: 18, height: 24, display: 'flex', alignItems: 'center', justifyContent: 'center',
+            background: 'none', border: 'none', cursor: hasChildren ? 'pointer' : 'default',
+            color: C.inkFaint, flexShrink: 0, marginTop: 1,
+          }}
+        >
+          {hasChildren ? (expanded ? <ChevronDown size={14} /> : <ChevronRight size={14} />) : null}
+        </button>
+
+        {showStatus && (
+          <button
+            onClick={() => onCycleStatus(node.id)}
+            title="상태 변경"
+            style={{ background: 'none', border: 'none', cursor: 'pointer', padding: 2, marginTop: 1, flexShrink: 0 }}
+          >
+            <StatusIcon status={node.status} />
+          </button>
+        )}
+
+        <div style={{ flex: 1, minWidth: 0 }}>
+          {editing ? (
+            <input
+              ref={inputRef}
+              defaultValue={node.text}
+              onBlur={commitText}
+              onKeyDown={(e) => {
+                if (e.key === 'Enter') { e.preventDefault(); commitText(); }
+                if (e.key === 'Escape') { e.preventDefault(); setEditing(false); }
+              }}
+              style={{
+                width: '100%', font: 'inherit', fontSize: depth === 0 ? 15 : 14,
+                border: 'none', borderBottom: '1.5px solid ' + C.coral, background: 'transparent',
+                outline: 'none', padding: '2px 0', color: C.ink,
+              }}
+            />
+          ) : (
+            <div
+              onClick={() => setEditing(true)}
+              style={{
+                cursor: 'text', fontSize: depth === 0 ? 15 : 14,
+                fontWeight: depth === 0 ? 600 : 400,
+                lineHeight: 1.55,
+                color: isEmpty ? C.inkFaint : (node.status === 'done' ? C.inkSoft : C.ink),
+                fontStyle: isEmpty ? 'italic' : 'normal',
+                textDecoration: node.status === 'done' && showStatus ? 'line-through' : 'none',
+                textDecorationColor: C.inkFaint,
+                wordBreak: 'break-word',
+                padding: '2px 0',
+              }}
+            >
+              {isEmpty ? '내용을 입력하세요…' : node.text}
+            </div>
+          )}
+
+          {memoOpen && (
+            <div style={{ marginTop: 4, marginBottom: 2 }}>
+              <textarea
+                ref={memoRef}
+                defaultValue={node.memo}
+                placeholder="메모를 기록해보세요…"
+                onBlur={commitMemo}
+                rows={2}
+                style={{
+                  width: '100%', fontSize: 12.5, fontFamily: 'inherit', color: C.ink,
+                  background: C.goldSoft, border: '1px solid ' + C.borderSoft, borderRadius: 8,
+                  padding: '6px 8px', outline: 'none', resize: 'vertical', lineHeight: 1.5,
+                }}
+              />
+            </div>
+          )}
+        </div>
+
+        <div className="node-actions" style={{ display: 'flex', gap: 2, flexShrink: 0, marginTop: 1 }}>
+          <button
+            onClick={() => setMemoOpen((v) => !v)}
+            title="메모"
+            style={{
+              background: 'none', border: 'none', cursor: 'pointer', padding: 4, borderRadius: 6,
+              color: node.memo ? C.gold : C.inkFaint,
+            }}
+          >
+            <StickyNote size={13} />
+          </button>
+          <button
+            onClick={() => onAddChild(node.id)}
+            title="하위 항목 추가"
+            style={{ background: 'none', border: 'none', cursor: 'pointer', padding: 4, borderRadius: 6, color: C.inkFaint }}
+          >
+            <Plus size={13} />
+          </button>
+          <button
+            onClick={startDelete}
+            title={confirmDel ? '다시 누르면 삭제됩니다' : '삭제'}
+            style={{
+              background: confirmDel ? C.coralSoft : 'none', border: 'none', cursor: 'pointer',
+              padding: 4, borderRadius: 6, color: confirmDel ? C.coral : C.inkFaint,
+            }}
+          >
+            <Trash2 size={13} />
+          </button>
+        </div>
+      </div>
+
+      {hasChildren && expanded && (
+        <div style={{ borderLeft: '1px solid ' + C.borderSoft, marginLeft: 9 }}>
+          {node.children.map((child) => (
+            <TreeNode
+              key={child.id}
+              node={child}
+              depth={depth + 1}
+              showStatus={showStatus}
+              expandedIds={expandedIds}
+              toggleExpand={toggleExpand}
+              onEditText={onEditText}
+              onEditMemo={onEditMemo}
+              onCycleStatus={onCycleStatus}
+              onAddChild={onAddChild}
+              onDelete={onDelete}
+              query={query}
+            />
+          ))}
+        </div>
+      )}
+    </div>
+  );
+}
+
+/* ------------------------------------------------------------------ */
+/*  목록 화면 — 최상위 제목 카드만 표시                                 */
+/* ------------------------------------------------------------------ */
+
+function ListCard({ node, accent, showStatus, onOpen }) {
+  const { total, done } = countProgress(node.children && node.children.length ? node.children : [node]);
+  const childCount = node.children ? node.children.length : 0;
+
+  return (
+    <button
+      onClick={() => onOpen(node.id)}
+      style={{
+        display: 'flex', alignItems: 'center', gap: 12, width: '100%', textAlign: 'left',
+        background: C.card, border: '1px solid ' + C.border, borderRadius: 14,
+        padding: '15px 14px', cursor: 'pointer',
+      }}
+      className="list-card"
+    >
+      <div style={{ width: 4, alignSelf: 'stretch', minHeight: 30, borderRadius: 999, background: accent, flexShrink: 0 }} />
+      <div style={{ flex: 1, minWidth: 0 }}>
+        <div style={{
+          fontSize: 15.5, fontWeight: 600, color: C.ink, lineHeight: 1.4,
+          wordBreak: 'break-word',
+        }}>
+          {node.text || '내용을 입력하세요…'}
+        </div>
+        <div style={{ fontSize: 11.5, color: C.inkFaint, marginTop: 3 }}>
+          하위 항목 {childCount}개
+        </div>
+        {showStatus && total > 0 && (
+          <div style={{ marginTop: 8 }}>
+            <ProgressBar done={done} total={total} color={accent} />
+          </div>
+        )}
+      </div>
+      <ChevronRight size={18} color={C.inkFaint} style={{ flexShrink: 0 }} />
+    </button>
+  );
+}
+
+/* ------------------------------------------------------------------ */
+/*  상세 화면 — 하나의 최상위 카테고리 안으로 들어간 화면                */
+/* ------------------------------------------------------------------ */
+
+function DetailView({
+  node, showStatus, expandedIds, toggleExpand,
+  onEditText, onEditMemo, onCycleStatus, onAddChild, onDelete, onBack, accent,
+}) {
+  const [query, setQuery] = useState('');
+  const [titleEditing, setTitleEditing] = useState(false);
+  const [memoOpen, setMemoOpen] = useState(!!node.memo);
+  const titleRef = useRef(null);
+  const memoRef = useRef(null);
+  const q = query.trim().toLowerCase();
+
+  useEffect(() => {
+    if (titleEditing && titleRef.current) { titleRef.current.focus(); titleRef.current.select(); }
+  }, [titleEditing]);
+
+  const commitTitle = () => {
+    const val = titleRef.current ? titleRef.current.value : node.text;
+    onEditText(node.id, val.trim());
+    setTitleEditing(false);
+  };
+  const commitMemo = () => {
+    const val = memoRef.current ? memoRef.current.value : node.memo;
+    onEditMemo(node.id, val);
+  };
+
+  const { total, done } = countProgress(node.children || []);
+  const children = node.children || [];
+
+  return (
+    <div>
+      <button
+        onClick={onBack}
+        style={{
+          display: 'flex', alignItems: 'center', gap: 4, background: 'none', border: 'none',
+          cursor: 'pointer', color: C.inkSoft, fontSize: 13, padding: '4px 2px', marginBottom: 12,
+        }}
+      >
+        <ChevronLeft size={16} /> 목록으로
+      </button>
+
+      <div style={{ background: C.card, border: '1px solid ' + C.border, borderRadius: 14, padding: '16px 16px 12px', marginBottom: 14 }}>
+        <div style={{ display: 'flex', alignItems: 'flex-start', gap: 10 }}>
+          <div style={{ width: 4, alignSelf: 'stretch', minHeight: 24, borderRadius: 999, background: accent, marginTop: 3, flexShrink: 0 }} />
+          {showStatus && (
+            <button
+              onClick={() => onCycleStatus(node.id)}
+              title="상태 변경"
+              style={{ background: 'none', border: 'none', cursor: 'pointer', padding: 2, marginTop: 2, flexShrink: 0 }}
+            >
+              <StatusIcon status={node.status} size={20} />
+            </button>
+          )}
+          <div style={{ flex: 1, minWidth: 0 }}>
+            {titleEditing ? (
+              <input
+                ref={titleRef}
+                defaultValue={node.text}
+                onBlur={commitTitle}
+                onKeyDown={(e) => {
+                  if (e.key === 'Enter') { e.preventDefault(); commitTitle(); }
+                  if (e.key === 'Escape') { e.preventDefault(); setTitleEditing(false); }
+                }}
+                style={{
+                  width: '100%', fontFamily: "'Noto Serif KR', serif", fontWeight: 700, fontSize: 18,
+                  border: 'none', borderBottom: '1.5px solid ' + C.coral, background: 'transparent',
+                  outline: 'none', padding: '2px 0', color: C.ink,
+                }}
+              />
+            ) : (
+              <h2
+                onClick={() => setTitleEditing(true)}
+                style={{
+                  fontFamily: "'Noto Serif KR', serif", fontWeight: 700, fontSize: 18, margin: 0,
+                  color: C.ink, lineHeight: 1.4, cursor: 'text', wordBreak: 'break-word',
+                }}
+              >
+                {node.text || '내용을 입력하세요…'}
+              </h2>
+            )}
+            {memoOpen && (
+              <div style={{ marginTop: 8 }}>
+                <textarea
+                  ref={memoRef}
+                  defaultValue={node.memo}
+                  placeholder="이 카테고리에 대한 메모를 기록해보세요…"
+                  onBlur={commitMemo}
+                  rows={2}
+                  style={{
+                    width: '100%', fontSize: 12.5, fontFamily: 'inherit', color: C.ink,
+                    background: C.goldSoft, border: '1px solid ' + C.borderSoft, borderRadius: 8,
+                    padding: '6px 8px', outline: 'none', resize: 'vertical', lineHeight: 1.5,
+                  }}
+                />
+              </div>
+            )}
+          </div>
+          <button
+            onClick={() => setMemoOpen((v) => !v)}
+            title="메모"
+            style={{
+              background: 'none', border: 'none', cursor: 'pointer', padding: 4, borderRadius: 6,
+              color: node.memo ? C.gold : C.inkFaint, flexShrink: 0,
+            }}
+          >
+            <StickyNote size={15} />
+          </button>
+        </div>
+
+        {showStatus && total > 0 && (
+          <div style={{ marginTop: 12, paddingLeft: 14 }}>
+            <ProgressBar done={done} total={total} color={accent} />
+          </div>
+        )}
+      </div>
+
+      {children.length > 3 && (
+        <div style={{ position: 'relative', marginBottom: 12 }}>
+          <Search size={14} color={C.inkFaint} style={{ position: 'absolute', left: 11, top: 11 }} />
+          <input
+            value={query}
+            onChange={(e) => setQuery(e.target.value)}
+            placeholder="이 안에서 검색"
+            style={{
+              width: '100%', padding: '9px 10px 9px 32px', borderRadius: 10,
+              border: '1px solid ' + C.border, background: C.card, fontSize: 13, outline: 'none', color: C.ink,
+            }}
+          />
+        </div>
+      )}
+
+      <div style={{ background: C.card, border: '1px solid ' + C.border, borderRadius: 14, padding: '10px 14px' }}>
+        {children.length === 0 ? (
+          <div style={{ fontSize: 13, color: C.inkFaint, padding: '10px 4px', fontStyle: 'italic' }}>
+            아직 하위 항목이 없어요. 아래 버튼으로 추가해보세요.
+          </div>
+        ) : (
+          children.map((child) => (
+            <TreeNode
+              key={child.id}
+              node={child}
+              depth={0}
+              showStatus={showStatus}
+              expandedIds={expandedIds}
+              toggleExpand={toggleExpand}
+              onEditText={onEditText}
+              onEditMemo={onEditMemo}
+              onCycleStatus={onCycleStatus}
+              onAddChild={onAddChild}
+              onDelete={onDelete}
+              query={q}
+            />
+          ))
+        )}
+      </div>
+
+      <button
+        onClick={() => onAddChild(node.id)}
+        style={{
+          display: 'flex', alignItems: 'center', gap: 6, marginTop: 10, padding: '9px 12px', borderRadius: 9,
+          border: '1px dashed ' + C.border, background: 'transparent', cursor: 'pointer', width: '100%',
+          justifyContent: 'center', fontSize: 12.5, color: C.inkSoft, fontWeight: 500,
+        }}
+      >
+        <Plus size={14} /> 하위 항목 추가
+      </button>
+    </div>
+  );
+}
+
+/* ------------------------------------------------------------------ */
+/*  App                                                                 */
+/* ------------------------------------------------------------------ */
+
+function CategoryCard({
+  node, accent, showStatus, expandedIds, toggleExpand,
+  onEditText, onEditMemo, onCycleStatus, onAddChild, onDelete, query,
+}) {
+  if (query && !nodeMatches(node, query)) return null;
+  const { total, done } = countProgress(node.children && node.children.length ? node.children : [node]);
+
+  return (
+    <div
+      style={{
+        background: C.card, border: '1px solid ' + C.border, borderRadius: 14,
+        padding: '14px 14px 8px', boxShadow: '0 1px 2px rgba(44,38,32,0.04)',
+      }}
+    >
+      <div style={{ display: 'flex', alignItems: 'flex-start', gap: 8, marginBottom: showStatus ? 8 : 2 }}>
+        <div style={{ width: 3, alignSelf: 'stretch', minHeight: 18, borderRadius: 999, background: accent, marginTop: 3 }} />
+        <div style={{ flex: 1, minWidth: 0 }}>
+          <TreeNode
+            node={node}
+            depth={0}
+            showStatus={showStatus}
+            expandedIds={expandedIds}
+            toggleExpand={toggleExpand}
+            onEditText={onEditText}
+            onEditMemo={onEditMemo}
+            onCycleStatus={onCycleStatus}
+            onAddChild={onAddChild}
+            onDelete={onDelete}
+            query={query}
+          />
+        </div>
+      </div>
+      {showStatus && total > 0 && (
+        <div style={{ padding: '2px 6px 8px 20px' }}>
+          <ProgressBar done={done} total={total} color={accent} />
+        </div>
+      )}
+    </div>
+  );
+}
+
+function SectionBlock({
+  title, icon, tree, sectionKey, showStatus, accentOffset, inline,
+  onOpen, onAddTop, onReset, resetConfirm, setResetConfirm, query,
+  expandedIds, toggleExpand, onEditText, onEditMemo, onCycleStatus, onAddChild, onDelete,
+}) {
+  const q = query.trim().toLowerCase();
+  const overall = showStatus ? countProgress(tree) : null;
+  const visible = tree
+    .map((node, i) => ({ node, i }))
+    .filter(({ node }) => !q || nodeMatches(node, q));
+
+  return (
+    <div style={{ marginBottom: 26 }}>
+      <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 10 }}>
+        <div style={{
+          width: 26, height: 26, borderRadius: 8, background: C.bgSoft,
+          display: 'flex', alignItems: 'center', justifyContent: 'center', color: C.coral, flexShrink: 0,
+        }}>
+          {icon}
+        </div>
+        <h2 style={{
+          fontFamily: "'Noto Serif KR', serif", fontWeight: 700, fontSize: 16.5,
+          margin: 0, color: C.ink,
+        }}>
+          {title}
+        </h2>
+      </div>
+
+      {showStatus && overall && overall.total > 0 && (
+        <div style={{ background: C.card, border: '1px solid ' + C.border, borderRadius: 12, padding: '11px 14px', marginBottom: 10 }}>
+          <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: 11.5, color: C.inkSoft, marginBottom: 5 }}>
+            <span>전체 진행률</span>
+            <span>{overall.done} / {overall.total}</span>
+          </div>
+          <ProgressBar done={overall.done} total={overall.total} color={C.coral} />
+        </div>
+      )}
+
+      <div style={{ display: 'flex', flexDirection: 'column', gap: 9 }}>
+        {inline
+          ? visible.map(({ node, i }) => (
+              <CategoryCard
+                key={node.id}
+                node={node}
+                accent={ACCENTS[(i + accentOffset) % ACCENTS.length]}
+                showStatus={showStatus}
+                expandedIds={expandedIds}
+                toggleExpand={toggleExpand}
+                onEditText={onEditText}
+                onEditMemo={onEditMemo}
+                onCycleStatus={onCycleStatus}
+                onAddChild={onAddChild}
+                onDelete={onDelete}
+                query={q}
+              />
+            ))
+          : visible.map(({ node, i }) => (
+              <ListCard
+                key={node.id}
+                node={node}
+                accent={ACCENTS[(i + accentOffset) % ACCENTS.length]}
+                showStatus={showStatus}
+                onOpen={(id) => onOpen(sectionKey, id)}
+              />
+            ))}
+        {tree.length > 0 && q && visible.length === 0 && (
+          <div style={{ fontSize: 12.5, color: C.inkFaint, padding: '14px 4px', textAlign: 'center', fontStyle: 'italic' }}>
+            검색 결과가 없어요.
+          </div>
+        )}
+      </div>
+
+      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginTop: 10 }}>
+        <button
+          className="top-add-btn"
+          onClick={() => onAddTop(sectionKey)}
+          style={{
+            display: 'flex', alignItems: 'center', gap: 6, padding: '7px 11px', borderRadius: 9,
+            border: '1px dashed ' + C.border, background: 'transparent', cursor: 'pointer',
+            fontSize: 12, color: C.inkSoft, fontWeight: 500,
+          }}
+        >
+          <Plus size={13} /> {sectionKey === 'mission' ? '새 가치 항목 추가' : '새 실행 카테고리 추가'}
+        </button>
+
+        {resetConfirm === sectionKey ? (
+          <div style={{ display: 'flex', alignItems: 'center', gap: 6, fontSize: 11, color: C.inkSoft }}>
+            되돌릴까요?
+            <button onClick={() => onReset(sectionKey)} style={{ background: C.coralSoft, color: C.coral, border: 'none', borderRadius: 6, padding: '4px 7px', cursor: 'pointer', fontSize: 11, display: 'flex', alignItems: 'center', gap: 3 }}>
+              <Check size={11} /> 확인
+            </button>
+            <button onClick={() => setResetConfirm(null)} style={{ background: 'none', color: C.inkFaint, border: 'none', borderRadius: 6, padding: '4px 7px', cursor: 'pointer', fontSize: 11, display: 'flex', alignItems: 'center', gap: 3 }}>
+              <X size={11} /> 취소
+            </button>
+          </div>
+        ) : (
+          <button
+            onClick={() => setResetConfirm(sectionKey)}
+            style={{ display: 'flex', alignItems: 'center', gap: 4, background: 'none', border: 'none', cursor: 'pointer', fontSize: 11, color: C.inkFaint, padding: '5px 4px' }}
+          >
+            <RotateCcw size={11} /> 원본으로 되돌리기
+          </button>
+        )}
+      </div>
+    </div>
+  );
+}
+
+function App() {
+  const [view, setView] = useState('list'); // 'list' | 'detail'
+  const [activeSection, setActiveSection] = useState(null); // 'mission' | 'exec'
+  const [activeId, setActiveId] = useState(null);
+  const [missionTree, setMissionTree] = useState(null);
+  const [execTree, setExecTree] = useState(null);
+  const [expandedIds, setExpandedIds] = useState(new Set());
+  const [query, setQuery] = useState('');
+  const [loaded, setLoaded] = useState(false);
+  const [saveState, setSaveState] = useState('idle');
+  const [lastSaved, setLastSaved] = useState(null);
+  const [resetConfirm, setResetConfirm] = useState(null);
+  const saveTimer = useRef(null);
+
+  useEffect(() => {
+    (async () => {
+      let m = MISSION_SEED;
+      let e = EXEC_SEED;
+      let ts = null;
+      try {
+        const r = await Storage.get('bmhouse-mission-tree');
+        if (r && r.value) m = JSON.parse(r.value);
+      } catch (err) { /* 첫 방문: 시드 데이터 사용 */ }
+      try {
+        const r = await Storage.get('bmhouse-exec-tree');
+        if (r && r.value) e = JSON.parse(r.value);
+      } catch (err) { /* 첫 방문: 시드 데이터 사용 */ }
+      try {
+        const r = await Storage.get('bmhouse-last-updated');
+        if (r && r.value) ts = Number(r.value);
+      } catch (err) { /* no-op */ }
+
+      setMissionTree(m);
+      setExecTree(e);
+      setLastSaved(ts);
+
+      const ids = [];
+      collectIds(m, ids);
+      collectIds(e, ids);
+      setExpandedIds(new Set(ids));
+      setLoaded(true);
+    })();
+  }, []);
+
+  const persist = useCallback((mTree, eTree) => {
+    setSaveState('saving');
+    if (saveTimer.current) clearTimeout(saveTimer.current);
+    saveTimer.current = setTimeout(async () => {
+      try {
+        await Storage.set('bmhouse-mission-tree', JSON.stringify(mTree));
+        await Storage.set('bmhouse-exec-tree', JSON.stringify(eTree));
+        const now = Date.now();
+        await Storage.set('bmhouse-last-updated', String(now));
+        setLastSaved(now);
+        setSaveState('saved');
+      } catch (err) {
+        setSaveState('error');
+      }
+    }, 500);
+  }, []);
+
+  useEffect(() => {
+    if (!loaded) return;
+    persist(missionTree, execTree);
+  }, [missionTree, execTree, loaded, persist]);
+
+  const treeFor = (section) => (section === 'mission' ? missionTree : execTree);
+  const setTreeFor = (section, updater) => {
+    if (section === 'mission') setMissionTree(updater);
+    else setExecTree(updater);
+  };
+
+  const toggleExpand = (id) => {
+    setExpandedIds((prev) => {
+      const next = new Set(prev);
+      if (next.has(id)) next.delete(id); else next.add(id);
+      return next;
+    });
+  };
+
+  const onEditText = (section, id, text) => setTreeFor(section, (prev) => mapTree(prev, id, (n) => ({ ...n, text })));
+  const onEditMemo = (section, id, memo) => setTreeFor(section, (prev) => mapTree(prev, id, (n) => ({ ...n, memo })));
+  const onCycleStatus = (section, id) => setTreeFor(section, (prev) => mapTree(prev, id, (n) => ({ ...n, status: nextStatus(n.status) })));
+  const onDelete = (section, id) => {
+    setTreeFor(section, (prev) => removeFromTree(prev, id));
+    if (section === activeSection && id === activeId) { setView('list'); setActiveId(null); setActiveSection(null); }
+  };
+  const onAddChild = (section, parentId) => {
+    const child = { id: uid(), text: '', status: 'todo', memo: '', children: [] };
+    setTreeFor(section, (prev) => addChildToTree(prev, parentId, child));
+    setExpandedIds((prev) => new Set(prev).add(parentId).add(child.id));
+  };
+  const onAddTop = (section) => {
+    const node = { id: uid(), text: '', status: 'todo', memo: '', children: [] };
+    setTreeFor(section, (prev) => [...prev, node]);
+    setExpandedIds((prev) => new Set(prev).add(node.id));
+  };
+
+  const doReset = (section) => {
+    if (section === 'mission') setMissionTree(deepClone(MISSION_SEED));
+    else setExecTree(deepClone(EXEC_SEED));
+    setResetConfirm(null);
+  };
+
+  const openDetail = (section, id) => { setActiveSection(section); setActiveId(id); setView('detail'); };
+  const backToList = () => { setView('list'); setActiveId(null); setActiveSection(null); };
+
+  if (!loaded) {
+    return (
+      <div style={{ minHeight: 400, display: 'flex', alignItems: 'center', justifyContent: 'center', background: C.bg, fontFamily: "'Noto Sans KR', sans-serif", color: C.inkSoft, fontSize: 13 }}>
+        불러오는 중…
+      </div>
+    );
+  }
+
+  const q = query.trim().toLowerCase();
+  const activeTree = activeSection ? treeFor(activeSection) : null;
+  const activeNode = activeTree && activeId ? activeTree.find((n) => n.id === activeId) : null;
+  const activeIndex = activeTree && activeId ? activeTree.findIndex((n) => n.id === activeId) : -1;
+  const effectiveView = (view === 'detail' && !activeNode) ? 'list' : view;
+
+  return (
+    <div style={{ background: C.bg, minHeight: '100%', fontFamily: "'Noto Sans KR', sans-serif", color: C.ink }}>
+      <style>{`
+        @import url('https://fonts.googleapis.com/css2?family=Noto+Serif+KR:wght@500;700&family=Noto+Sans+KR:wght@400;500;600;700&display=swap');
+        * { box-sizing: border-box; }
+        .node-row:hover { background: ${C.cardAlt}; }
+        .node-actions button:hover { background: ${C.borderSoft}; }
+        .list-card:hover { border-color: ${C.coral}; box-shadow: 0 2px 8px rgba(44,38,32,0.06); }
+        input, textarea { font-family: 'Noto Sans KR', sans-serif; }
+        ::-webkit-scrollbar { width: 8px; height: 8px; }
+        ::-webkit-scrollbar-thumb { background: ${C.border}; border-radius: 8px; }
+        .top-add-btn:hover { background: ${C.bgSoft}; }
+        .two-col { display: grid; grid-template-columns: 1fr 1fr; gap: 30px; align-items: start; }
+        .right-col { border-left: 1px solid ${C.border}; padding-left: 30px; }
+        @media (max-width: 720px) {
+          .two-col { grid-template-columns: 1fr; gap: 0; }
+          .right-col { border-left: none; padding-left: 0; border-top: 1px solid ${C.border}; padding-top: 22px; margin-top: 4px; }
+        }
+      `}</style>
+
+      <div style={{ maxWidth: 1040, margin: '0 auto', padding: '28px 18px 60px' }}>
+        {/* 헤더 */}
+        <div style={{ marginBottom: 22 }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 6 }}>
+            <div style={{
+              width: 34, height: 34, borderRadius: 10, background: C.coral,
+              display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0,
+            }}>
+              <Compass size={18} color="#FFF" strokeWidth={2} />
+            </div>
+            <div>
+              <h1 style={{
+                fontFamily: "'Noto Serif KR', serif", fontWeight: 700, fontSize: 21,
+                margin: 0, color: C.ink, letterSpacing: '-0.01em',
+              }}>
+                비엠하우스 사업 소명과 실행 기획
+              </h1>
+              <div style={{ fontSize: 12, color: C.inkSoft, marginTop: 2 }}>
+                생명을 살리고 돌보는 일 — 소명에서 실행까지, 언제든 기록하는 대시보드
+              </div>
+            </div>
+          </div>
+          <div style={{ fontSize: 11, color: C.inkFaint, marginLeft: 44 }}>
+            {saveState === 'saving' ? '저장 중…' : lastSaved ? '마지막 기록 · ' + formatRelative(lastSaved) : '아직 기록 없음'}
+          </div>
+        </div>
+
+        {effectiveView === 'detail' && activeNode ? (
+          <DetailView
+            node={activeNode}
+            showStatus={activeSection === 'exec'}
+            expandedIds={expandedIds}
+            toggleExpand={toggleExpand}
+            onEditText={(id, text) => onEditText(activeSection, id, text)}
+            onEditMemo={(id, memo) => onEditMemo(activeSection, id, memo)}
+            onCycleStatus={(id) => onCycleStatus(activeSection, id)}
+            onAddChild={(id) => onAddChild(activeSection, id)}
+            onDelete={(id) => onDelete(activeSection, id)}
+            onBack={backToList}
+            accent={ACCENTS[Math.max(activeIndex, 0) % ACCENTS.length]}
+          />
+        ) : (
+          <>
+            {/* 전체 검색 (두 섹션 공통) */}
+            <div style={{ position: 'relative', marginBottom: 20 }}>
+              <Search size={14} color={C.inkFaint} style={{ position: 'absolute', left: 11, top: 11 }} />
+              <input
+                value={query}
+                onChange={(e) => setQuery(e.target.value)}
+                placeholder="제목·하위 내용·메모 검색"
+                style={{
+                  width: '100%', padding: '9px 10px 9px 32px', borderRadius: 10,
+                  border: '1px solid ' + C.border, background: C.card, fontSize: 13, outline: 'none', color: C.ink,
+                }}
+              />
+            </div>
+
+            {/* 소명과 가치(왼쪽) / 실행 계획(오른쪽) */}
+            <div className="two-col">
+              <div>
+                <SectionBlock
+                  title="소명과 가치"
+                  icon={<Sparkles size={14} />}
+                  tree={missionTree}
+                  sectionKey="mission"
+                  showStatus={false}
+                  inline={true}
+                  accentOffset={0}
+                  onOpen={openDetail}
+                  onAddTop={onAddTop}
+                  onReset={doReset}
+                  resetConfirm={resetConfirm}
+                  setResetConfirm={setResetConfirm}
+                  query={query}
+                  expandedIds={expandedIds}
+                  toggleExpand={toggleExpand}
+                  onEditText={(id, text) => onEditText('mission', id, text)}
+                  onEditMemo={(id, memo) => onEditMemo('mission', id, memo)}
+                  onCycleStatus={(id) => onCycleStatus('mission', id)}
+                  onAddChild={(id) => onAddChild('mission', id)}
+                  onDelete={(id) => onDelete('mission', id)}
+                />
+              </div>
+
+              <div className="right-col">
+                <SectionBlock
+                  title="실행 계획"
+                  icon={<CheckCircle2 size={14} />}
+                  tree={execTree}
+                  sectionKey="exec"
+                  showStatus={true}
+                  inline={false}
+                  accentOffset={1}
+                  onOpen={openDetail}
+                  onAddTop={onAddTop}
+                  onReset={doReset}
+                  resetConfirm={resetConfirm}
+                  setResetConfirm={setResetConfirm}
+                  query={query}
+                />
+              </div>
+            </div>
+          </>
+        )}
+      </div>
+    </div>
+  );
+}
+
+const root = ReactDOM.createRoot(document.getElementById('root'));
+root.render(<App />);
+
+</script>
+</body>
+</html>
