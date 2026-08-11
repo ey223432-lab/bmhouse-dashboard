@@ -8,6 +8,8 @@
 <script src="https://cdnjs.cloudflare.com/ajax/libs/react/18.2.0/umd/react.production.min.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/react-dom/18.2.0/umd/react-dom.production.min.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/babel-standalone/7.23.5/babel.min.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore-compat.js"></script>
 <style>
   html, body { margin: 0; padding: 0; background: #FAF7F1; }
   #root { min-height: 100vh; }
@@ -54,14 +56,28 @@ const Sparkles = (p) => (
   <Icon {...p}><path d="M12 3v4M12 17v4M3 12h4M17 12h4M6 6l2 2M16 16l2 2M6 18l2-2M16 8l2-2" /></Icon>
 );
 
-/* ---- localStorage 저장소 래퍼 (Claude 환경 밖 - 독립 실행용) ---- */
+/* ---- Firebase 연결 (bmhouse-dashboard 프로젝트) ---- */
+const firebaseConfig = {
+  apiKey: "AIzaSyAQw-CrNMfXzTOpYxs35fNhYx_wRTZ91e0",
+  authDomain: "bmhouse-dashboard.firebaseapp.com",
+  projectId: "bmhouse-dashboard",
+  storageBucket: "bmhouse-dashboard.firebasestorage.app",
+  messagingSenderId: "992236814614",
+  appId: "1:992236814614:web:6667e95ea6fa28d66b9037",
+};
+firebase.initializeApp(firebaseConfig);
+const db = firebase.firestore();
+
+/* ---- Firestore 저장소 래퍼 (여러 기기·브라우저 간 동기화) ---- */
 const Storage = {
   get: async (key) => {
-    const v = localStorage.getItem(key);
-    return v === null ? null : { key, value: v };
+    const snap = await db.collection('bmhouse').doc(key).get();
+    if (!snap.exists) return null;
+    const data = snap.data();
+    return { key, value: data.value };
   },
   set: async (key, value) => {
-    localStorage.setItem(key, value);
+    await db.collection('bmhouse').doc(key).set({ value, updatedAt: Date.now() });
     return { key, value };
   },
 };
