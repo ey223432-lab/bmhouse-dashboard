@@ -1027,7 +1027,7 @@ function App() {
                   tree={execTree}
                   sectionKey="exec"
                   showStatus={true}
-                  inline={false}
+                  inline={true}
                   accentOffset={1}
                   onOpen={openDetail}
                   onAddTop={onAddTop}
@@ -1035,6 +1035,13 @@ function App() {
                   resetConfirm={resetConfirm}
                   setResetConfirm={setResetConfirm}
                   query={query}
+                  expandedIds={expandedIds}
+                  toggleExpand={toggleExpand}
+                  onEditText={(id, text) => onEditText('exec', id, text)}
+                  onEditMemo={(id, memo) => onEditMemo('exec', id, memo)}
+                  onCycleStatus={(id) => onCycleStatus('exec', id)}
+                  onAddChild={(id) => onAddChild('exec', id)}
+                  onDelete={(id) => onDelete('exec', id)}
                 />
               </div>
             </div>
