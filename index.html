@@ -677,7 +677,7 @@ function CategoryCard({
 }
 
 function SectionBlock({
-  title, icon, tree, sectionKey, showStatus, accentOffset, inline,
+  title, icon, tree, sectionKey, showStatus, accentOffset, inline, subtitleLines,
   onOpen, onAddTop, onReset, resetConfirm, setResetConfirm, query,
   expandedIds, toggleExpand, onEditText, onEditMemo, onCycleStatus, onAddChild, onDelete,
 }) {
@@ -703,6 +703,19 @@ function SectionBlock({
           {title}
         </h2>
       </div>
+
+      {subtitleLines && subtitleLines.length > 0 && (
+        <div style={{ margin: '-2px 0 14px 34px', display: 'flex', flexDirection: 'column', gap: 3 }}>
+          {subtitleLines.map((line, i) => (
+            <div key={i} style={{
+              fontFamily: "'Noto Serif KR', serif", fontStyle: 'italic', fontWeight: 500,
+              fontSize: 12.5, color: C.sage, lineHeight: 1.5,
+            }}>
+              "{line}"
+            </div>
+          ))}
+        </div>
+      )}
 
       {showStatus && overall && overall.total > 0 && (
         <div style={{ background: C.card, border: '1px solid ' + C.border, borderRadius: 12, padding: '11px 14px', marginBottom: 10 }}>
@@ -1029,6 +1042,7 @@ function App() {
                   showStatus={true}
                   inline={true}
                   accentOffset={1}
+                  subtitleLines={['의도보다 방향이 중요하다', '작은 선택이 반복되면 길이 된다']}
                   onOpen={openDetail}
                   onAddTop={onAddTop}
                   onReset={doReset}
