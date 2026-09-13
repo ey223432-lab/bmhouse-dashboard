@@ -35,6 +35,7 @@ function Icon({ children, size = 18, color = 'currentColor', strokeWidth = 2 }) 
 const ChevronRight = (p) => <Icon {...p}><polyline points="9 6 15 12 9 18" /></Icon>;
 const ChevronLeft = (p) => <Icon {...p}><polyline points="15 6 9 12 15 18" /></Icon>;
 const ChevronDown = (p) => <Icon {...p}><polyline points="6 9 12 15 18 9" /></Icon>;
+const ChevronUp = (p) => <Icon {...p}><polyline points="18 15 12 9 6 15" /></Icon>;
 const Circle = (p) => <Icon {...p}><circle cx="12" cy="12" r="9" /></Icon>;
 const CircleDot = (p) => (
   <Icon {...p}><circle cx="12" cy="12" r="9" /><circle cx="12" cy="12" r="2.6" fill={p.color || 'currentColor'} stroke="none" /></Icon>
@@ -159,6 +160,24 @@ function addChildToTree(nodes, parentId, child) {
   });
 }
 
+function moveInTree(nodes, id, direction) {
+  const idx = nodes.findIndex((n) => n.id === id);
+  if (idx > -1) {
+    const swapIdx = direction === 'up' ? idx - 1 : idx + 1;
+    if (swapIdx < 0 || swapIdx >= nodes.length) return nodes; // 맨 위/맨 아래라 이동 불가
+    const next = nodes.slice();
+    const tmp = next[idx];
+    next[idx] = next[swapIdx];
+    next[swapIdx] = tmp;
+    return next;
+  }
+  return nodes.map((n) =>
+    n.children && n.children.length
+      ? { ...n, children: moveInTree(n.children, id, direction) }
+      : n
+  );
+}
+
 function collectIds(nodes, acc) {
   nodes.forEach((n) => {
     acc.push(n.id);
@@ -236,6 +255,7 @@ function ProgressBar({ done, total, color }) {
 function TreeNode({
   node, depth, showStatus, expandedIds, toggleExpand,
   onEditText, onEditMemo, onCycleStatus, onAddChild, onDelete, query,
+  isFirst, isLast, onMoveUp, onMoveDown,
 }) {
   const [editing, setEditing] = useState(false);
   const [memoOpen, setMemoOpen] = useState(!!node.memo);
@@ -365,6 +385,30 @@ function TreeNode({
 
         <div className="node-actions" style={{ display: 'flex', gap: 2, flexShrink: 0, marginTop: 1 }}>
           <button
+            onClick={() => !isFirst && onMoveUp(node.id)}
+            disabled={isFirst}
+            title="위로 이동"
+            style={{
+              background: 'none', border: 'none', padding: 4, borderRadius: 6,
+              color: isFirst ? C.borderSoft : C.inkFaint,
+              cursor: isFirst ? 'default' : 'pointer',
+            }}
+          >
+            <ChevronUp size={13} />
+          </button>
+          <button
+            onClick={() => !isLast && onMoveDown(node.id)}
+            disabled={isLast}
+            title="아래로 이동"
+            style={{
+              background: 'none', border: 'none', padding: 4, borderRadius: 6,
+              color: isLast ? C.borderSoft : C.inkFaint,
+              cursor: isLast ? 'default' : 'pointer',
+            }}
+          >
+            <ChevronDown size={13} />
+          </button>
+          <button
             onClick={() => setMemoOpen((v) => !v)}
             title="메모"
             style={{
@@ -396,7 +440,7 @@ function TreeNode({
 
       {hasChildren && expanded && (
         <div style={{ borderLeft: '1px solid ' + C.borderSoft, marginLeft: 9 }}>
-          {node.children.map((child) => (
+          {node.children.map((child, i) => (
             <TreeNode
               key={child.id}
               node={child}
@@ -410,6 +454,10 @@ function TreeNode({
               onAddChild={onAddChild}
               onDelete={onDelete}
               query={query}
+              isFirst={i === 0}
+              isLast={i === node.children.length - 1}
+              onMoveUp={onMoveUp}
+              onMoveDown={onMoveDown}
             />
           ))}
         </div>
@@ -465,6 +513,7 @@ function ListCard({ node, accent, showStatus, onOpen }) {
 function DetailView({
   node, showStatus, expandedIds, toggleExpand,
   onEditText, onEditMemo, onCycleStatus, onAddChild, onDelete, onBack, accent,
+  onMoveUp, onMoveDown,
 }) {
   const [query, setQuery] = useState('');
   const [titleEditing, setTitleEditing] = useState(false);
@@ -598,7 +647,7 @@ function DetailView({
             아직 하위 항목이 없어요. 아래 버튼으로 추가해보세요.
           </div>
         ) : (
-          children.map((child) => (
+          children.map((child, i) => (
             <TreeNode
               key={child.id}
               node={child}
@@ -612,6 +661,10 @@ function DetailView({
               onAddChild={onAddChild}
               onDelete={onDelete}
               query={q}
+              isFirst={i === 0}
+              isLast={i === children.length - 1}
+              onMoveUp={onMoveUp}
+              onMoveDown={onMoveDown}
             />
           ))
         )}
@@ -638,6 +691,7 @@ function DetailView({
 function CategoryCard({
   node, accent, showStatus, expandedIds, toggleExpand,
   onEditText, onEditMemo, onCycleStatus, onAddChild, onDelete, query,
+  isFirst, isLast, onMoveUp, onMoveDown,
 }) {
   if (query && !nodeMatches(node, query)) return null;
   const { total, done } = countProgress(node.children && node.children.length ? node.children : [node]);
@@ -664,6 +718,10 @@ function CategoryCard({
             onAddChild={onAddChild}
             onDelete={onDelete}
             query={query}
+            isFirst={isFirst}
+            isLast={isLast}
+            onMoveUp={onMoveUp}
+            onMoveDown={onMoveDown}
           />
         </div>
       </div>
@@ -680,6 +738,7 @@ function SectionBlock({
   title, icon, tree, sectionKey, showStatus, accentOffset, inline, subtitleLines,
   onOpen, onAddTop, onReset, resetConfirm, setResetConfirm, query,
   expandedIds, toggleExpand, onEditText, onEditMemo, onCycleStatus, onAddChild, onDelete,
+  onMoveUp, onMoveDown,
 }) {
   const q = query.trim().toLowerCase();
   const overall = showStatus ? countProgress(tree) : null;
@@ -743,6 +802,10 @@ function SectionBlock({
                 onAddChild={onAddChild}
                 onDelete={onDelete}
                 query={q}
+                isFirst={i === 0}
+                isLast={i === tree.length - 1}
+                onMoveUp={onMoveUp}
+                onMoveDown={onMoveDown}
               />
             ))
           : visible.map(({ node, i }) => (
@@ -799,6 +862,7 @@ function SectionBlock({
 
 function App() {
   const [view, setView] = useState('list'); // 'list' | 'detail'
+  const [activeTab, setActiveTab] = useState('mission'); // 'mission' | 'exec' — 목록 화면에서 어느 섹션을 보여줄지
   const [activeSection, setActiveSection] = useState(null); // 'mission' | 'exec'
   const [activeId, setActiveId] = useState(null);
   const [missionTree, setMissionTree] = useState(null);
@@ -889,6 +953,9 @@ function App() {
     setTreeFor(section, (prev) => addChildToTree(prev, parentId, child));
     setExpandedIds((prev) => new Set(prev).add(parentId).add(child.id));
   };
+  const onMove = (section, id, direction) => {
+    setTreeFor(section, (prev) => moveInTree(prev, id, direction));
+  };
   const onAddTop = (section) => {
     const node = { id: uid(), text: '', status: 'todo', memo: '', children: [] };
     setTreeFor(section, (prev) => [...prev, node]);
@@ -930,12 +997,18 @@ function App() {
         ::-webkit-scrollbar { width: 8px; height: 8px; }
         ::-webkit-scrollbar-thumb { background: ${C.border}; border-radius: 8px; }
         .top-add-btn:hover { background: ${C.bgSoft}; }
-        .two-col { display: grid; grid-template-columns: 1fr 1fr; gap: 30px; align-items: start; }
-        .right-col { border-left: 1px solid ${C.border}; padding-left: 30px; }
-        @media (max-width: 720px) {
-          .two-col { grid-template-columns: 1fr; gap: 0; }
-          .right-col { border-left: none; padding-left: 0; border-top: 1px solid ${C.border}; padding-top: 22px; margin-top: 4px; }
+        .section-tabs { display: flex; gap: 8px; margin-bottom: 18px; }
+        .section-tab {
+          display: flex; align-items: center; gap: 7px;
+          flex: 1; justify-content: center;
+          padding: 10px 12px; border-radius: 10px;
+          border: 1px solid ${C.border}; background: ${C.card};
+          color: ${C.inkSoft}; font-size: 13.5px; font-weight: 600;
+          font-family: 'Noto Sans KR', sans-serif; cursor: pointer;
+          transition: border-color .15s, color .15s, background .15s;
         }
+        .section-tab:hover { color: ${C.ink}; border-color: ${C.coral}; }
+        .section-tab.on { background: ${C.coral}; border-color: ${C.coral}; color: #FFF; }
       `}</style>
 
       <div style={{ maxWidth: 1040, margin: '0 auto', padding: '28px 18px 60px' }}>
@@ -987,6 +1060,8 @@ function App() {
             onCycleStatus={(id) => onCycleStatus(activeSection, id)}
             onAddChild={(id) => onAddChild(activeSection, id)}
             onDelete={(id) => onDelete(activeSection, id)}
+            onMoveUp={(id) => onMove(activeSection, id, 'up')}
+            onMoveDown={(id) => onMove(activeSection, id, 'down')}
             onBack={backToList}
             accent={ACCENTS[Math.max(activeIndex, 0) % ACCENTS.length]}
           />
@@ -1006,59 +1081,78 @@ function App() {
               />
             </div>
 
-            {/* 소명과 가치(왼쪽) / 실행 계획(오른쪽) */}
-            <div className="two-col">
-              <div>
-                <SectionBlock
-                  title="소명과 가치"
-                  icon={<Sparkles size={14} />}
-                  tree={missionTree}
-                  sectionKey="mission"
-                  showStatus={false}
-                  inline={true}
-                  accentOffset={0}
-                  onOpen={openDetail}
-                  onAddTop={onAddTop}
-                  onReset={doReset}
-                  resetConfirm={resetConfirm}
-                  setResetConfirm={setResetConfirm}
-                  query={query}
-                  expandedIds={expandedIds}
-                  toggleExpand={toggleExpand}
-                  onEditText={(id, text) => onEditText('mission', id, text)}
-                  onEditMemo={(id, memo) => onEditMemo('mission', id, memo)}
-                  onCycleStatus={(id) => onCycleStatus('mission', id)}
-                  onAddChild={(id) => onAddChild('mission', id)}
-                  onDelete={(id) => onDelete('mission', id)}
-                />
-              </div>
-
-              <div className="right-col">
-                <SectionBlock
-                  title="실행 계획"
-                  icon={<CheckCircle2 size={14} />}
-                  tree={execTree}
-                  sectionKey="exec"
-                  showStatus={true}
-                  inline={true}
-                  accentOffset={1}
-                  subtitleLines={['의도보다 방향이 중요하다', '작은 선택이 반복되면 길이 된다']}
-                  onOpen={openDetail}
-                  onAddTop={onAddTop}
-                  onReset={doReset}
-                  resetConfirm={resetConfirm}
-                  setResetConfirm={setResetConfirm}
-                  query={query}
-                  expandedIds={expandedIds}
-                  toggleExpand={toggleExpand}
-                  onEditText={(id, text) => onEditText('exec', id, text)}
-                  onEditMemo={(id, memo) => onEditMemo('exec', id, memo)}
-                  onCycleStatus={(id) => onCycleStatus('exec', id)}
-                  onAddChild={(id) => onAddChild('exec', id)}
-                  onDelete={(id) => onDelete('exec', id)}
-                />
-              </div>
+            {/* 소명과 가치 / 실행 계획 — 탭으로 전환, 클릭한 쪽만 표시 */}
+            <div className="section-tabs" role="tablist" aria-label="섹션 전환">
+              <button
+                role="tab"
+                aria-selected={activeTab === 'mission'}
+                onClick={() => setActiveTab('mission')}
+                className={'section-tab' + (activeTab === 'mission' ? ' on' : '')}
+              >
+                <Sparkles size={14} /> 소명과 가치
+              </button>
+              <button
+                role="tab"
+                aria-selected={activeTab === 'exec'}
+                onClick={() => setActiveTab('exec')}
+                className={'section-tab' + (activeTab === 'exec' ? ' on' : '')}
+              >
+                <CheckCircle2 size={14} /> 실행 계획
+              </button>
             </div>
+
+            {activeTab === 'mission' ? (
+              <SectionBlock
+                title="소명과 가치"
+                icon={<Sparkles size={14} />}
+                tree={missionTree}
+                sectionKey="mission"
+                showStatus={false}
+                inline={true}
+                accentOffset={0}
+                onOpen={openDetail}
+                onAddTop={onAddTop}
+                onReset={doReset}
+                resetConfirm={resetConfirm}
+                setResetConfirm={setResetConfirm}
+                query={query}
+                expandedIds={expandedIds}
+                toggleExpand={toggleExpand}
+                onEditText={(id, text) => onEditText('mission', id, text)}
+                onEditMemo={(id, memo) => onEditMemo('mission', id, memo)}
+                onCycleStatus={(id) => onCycleStatus('mission', id)}
+                onAddChild={(id) => onAddChild('mission', id)}
+                onDelete={(id) => onDelete('mission', id)}
+                onMoveUp={(id) => onMove('mission', id, 'up')}
+                onMoveDown={(id) => onMove('mission', id, 'down')}
+              />
+            ) : (
+              <SectionBlock
+                title="실행 계획"
+                icon={<CheckCircle2 size={14} />}
+                tree={execTree}
+                sectionKey="exec"
+                showStatus={true}
+                inline={true}
+                accentOffset={1}
+                subtitleLines={['의도보다 방향이 중요하다', '작은 선택이 반복되면 길이 된다']}
+                onOpen={openDetail}
+                onAddTop={onAddTop}
+                onReset={doReset}
+                resetConfirm={resetConfirm}
+                setResetConfirm={setResetConfirm}
+                query={query}
+                expandedIds={expandedIds}
+                toggleExpand={toggleExpand}
+                onEditText={(id, text) => onEditText('exec', id, text)}
+                onEditMemo={(id, memo) => onEditMemo('exec', id, memo)}
+                onCycleStatus={(id) => onCycleStatus('exec', id)}
+                onAddChild={(id) => onAddChild('exec', id)}
+                onDelete={(id) => onDelete('exec', id)}
+                onMoveUp={(id) => onMove('exec', id, 'up')}
+                onMoveDown={(id) => onMove('exec', id, 'down')}
+              />
+            )}
           </>
         )}
       </div>
